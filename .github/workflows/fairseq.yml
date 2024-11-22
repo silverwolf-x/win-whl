@@ -2,7 +2,7 @@ name: fairseq
 on: [workflow_dispatch, push, pull_request]
 jobs:
   build:
-    name: Build for multiple Python versions
+    name: Build fairseq
     runs-on: windows-latest
     strategy:
       matrix:
