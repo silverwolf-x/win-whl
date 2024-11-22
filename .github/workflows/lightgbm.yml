@@ -1,0 +1,48 @@
+name: lightgbm
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=System'
+        choco install -y visualstudio2019buildtools
+        choco install -y git
+        choco install -y boost-msvc-14.1
+        choco install -y cuda
+
+    - name: Set up Boost environment
+      run: |
+        echo BOOST_ROOT=C:\\local\\boost_1_63_0 >> $GITHUB_ENV
+        echo BOOST_LIBRARYDIR=C:\\local\\boost_1_63_0\\lib64-msvc-14.1 >> $GITHUB_ENV
+
+    - name: Configure build
+      run: |
+        cmake -B build -S . -A x64 -DUSE_GPU=1 -DBOOST_ROOT=$BOOST_ROOT -DBOOST_LIBRARYDIR=$BOOST_LIBRARYDIR
+
+    - name: Build LightGBM
+      run: |
+        cmake --build build --target ALL_BUILD --config Release
+
+    - name: Find the built wheel file
+      run: |
+        dir /s /b *.whl
+
+    - name: Upload wheel file
+      uses: actions/upload-artifact@v4
+      with:
+        name: lightgbm-wheel
+        path: build\Release\*.whl
