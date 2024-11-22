@@ -5,3 +5,6 @@
 
 目前已支持：
 - [fairseq](https://github.com/facebookresearch/fairseq): python 3.10, 3.11, 3.12
+
+> [!note]
+> 你可以fork本仓库，然后在自己的github上使用action功能，点击按钮就能生成最新的包构建的wheel。
