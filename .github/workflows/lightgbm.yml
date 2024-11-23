@@ -11,9 +11,9 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
+    # - uses: actions/setup-python@v5
+    #   with:
+    #     python-version: '3.10'
     - name: boost
       uses: MarkusJx/install-boost@main
       id: install-boost
@@ -28,7 +28,7 @@ jobs:
       id: cuda-toolkit
       # https://docs.nvidia.com/cuda/archive/12.6.2/cuda-installation-guide-microsoft-windows/index.html#id3
       with:
-        cuda: 12.1.1
+        # cuda: 12.1.1
         method: local
         # sub-packages: '["nvcc", "visual_studio_integration"]'
         sub-packages: '["nvcc", "cudart"]'
@@ -57,13 +57,17 @@ jobs:
         python -V
         # pip wheel lightgbm --config-settings=cmake.define.Boost_ROOT=$BOOST_ROOT
 
-        pip wheel lightgbm --config-settings=cmake.define.USE_GPU=ON --config-settings=cmake.define.OpenCL_INCLUDE_DIR="$CUDA_PATH/include"--config-settings=cmake.define.Boost_ROOT=$BOOST_ROOT
+        # pip wheel lightgbm --config-settings=cmake.define.USE_GPU=ON --config-settings=cmake.define.OpenCL_INCLUDE_DIR="$CUDA_PATH/include"--config-settings=cmake.define.Boost_ROOT=$BOOST_ROOT
+
+        git clone --recursive https://github.com/Microsoft/LightGBM
+        cd LightGBM
+        sh ./build-python.sh bdist_wheel --gpu --boost-include-dir=$BOOST_ROOT
       env:
         BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
-
-    - name: Upload all wheel files
-      uses: actions/upload-artifact@v4
-      with:
-        name: lightgbm-wheels
-        path: ' d:\a\win-whl\win-whl\*lightgbm*.whl'
-        if-no-files-found: error
+    - run: tree LightGBM/dist
+    # - name: Upload all wheel files
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: lightgbm-wheels
+    #     path: ' d:\a\win-whl\win-whl\*lightgbm*.whl'
+    #     if-no-files-found: error
