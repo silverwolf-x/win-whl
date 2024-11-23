@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2022
+    runs-on: windows-2019
 
     steps:
     - uses: actions/setup-python@v5
@@ -23,6 +23,7 @@ jobs:
         method: 'network'
         sub-packages: '["nvcc", "visual_studio_integration"]'
         # 在GITHUB_ENV中输出CUDA_PATH
+    - run: nvcc -V
     - name: boost
       uses: MarkusJx/install-boost@main
       id: install-boost
