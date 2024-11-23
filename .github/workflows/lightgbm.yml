@@ -20,6 +20,8 @@ jobs:
       id: cuda-toolkit
       with:
         cuda: '12.1.1'
+        method: 'network'
+        sub-packages: '["nvcc", "visual_studio_integration"]'
         # 在GITHUB_ENV中输出CUDA_PATH
     - name: boost
       uses: MarkusJx/install-boost@main
