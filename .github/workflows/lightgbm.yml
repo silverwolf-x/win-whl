@@ -39,13 +39,14 @@ jobs:
 
 
         # Disable caching of the CUDA binaries, since it does not give us any significant performance improvement
-        use-github-cache: false
+        use-github-cache: true
         use-local-cache: false
         # 在GITHUB_ENV中输出CUDA_PATH
 
     - name: echo version
       run: |
         nvcc -V
+        nvidia-smi
         echo ${{ steps.cuda-toolkit.outputs.cuda }}
         echo "${{ env.CUDA_PATH }}"
         echo ${{ steps.install-boost.outputs.BOOST_VER }}
