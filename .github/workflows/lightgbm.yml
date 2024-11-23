@@ -9,43 +9,48 @@ on:
 
 jobs:
   build:
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:
     - uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-    - name: cuda-toolkit
-      uses: Jimver/cuda-toolkit@master
-      id: cuda-toolkit
-      with:
-        cuda: '12.1.1'
-        method: 'network'
-        sub-packages: '["nvcc", "visual_studio_integration"]'
-        # 在GITHUB_ENV中输出CUDA_PATH
-    - run: nvcc -V
     - name: boost
       uses: MarkusJx/install-boost@main
       id: install-boost
       with:
         platform_version: 2022
-        boost_version: 1.73.0
+        boost_version: 1.86.0
       # link: static
+    # - name: cuda-toolkit
+    #   uses: Jimver/cuda-toolkit@master
+    #   id: cuda-toolkit
+    #   # https://docs.nvidia.com/cuda/archive/12.6.2/cuda-installation-guide-microsoft-windows/index.html#id3
+    #   with:
+    #     cuda: '12.1.1'
+    #     method: 'network'
+    #     sub-packages: '["nvcc", "visual_studio_integration"]'
+    #     # Disable caching of the CUDA binaries, since it does not give us any significant performance improvement
+    #     use-github-cache: "false"
+    #     # 在GITHUB_ENV中输出CUDA_PATH
 
-    - name: echo version
-      run: |
-        echo ${{ steps.cuda-toolkit.outputs.cuda }}
-        echo ${{ steps.install-boost.outputs.BOOST_VER }}
+    # - name: echo version
+    #   run: |
+    #     nvcc -V
+    #     echo ${{ steps.cuda-toolkit.outputs.cuda }}
+    #     echo ${{ steps.install-boost.outputs.BOOST_VER }}
     - name: Configure build
       run: |
         # cmake -B build -S . -A x64 -DUSE_GPU=1 -DBOOST_ROOT=$BOOST_ROOT 
         # cmake -B build -S . -A x64 -DUSE_GPU=1 -DBOOST_ROOT=BOOST_ROOT -DOpenCL_LIBRARY="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.0/lib/x64/OpenCL.lib" -DOpenCL_INCLUDE_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.0/include"
 
         python -V
-        pip wheel lightgbm \
-          --config-settings=cmake.define.USE_GPU=ON \
-          --config-settings=cmake.define.OpenCL_INCLUDE_DIR=$CUDA_PATH/include \
-          --config-settings=cmake.define.Boost_ROOT=$BOOST_ROOT
+        pip wheel lightgbm --config-settings=cmake.define.Boost_ROOT=$BOOST_ROOT
+
+        # pip wheel lightgbm \
+        #   --config-settings=cmake.define.USE_GPU=ON \
+        #   --config-settings=cmake.define.OpenCL_INCLUDE_DIR=$CUDA_PATH/include \
+        #   --config-settings=cmake.define.Boost_ROOT=$BOOST_ROOT
       env:
         BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
     - name: Upload all wheel files
