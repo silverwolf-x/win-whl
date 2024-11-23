@@ -1,9 +1,10 @@
 name: lightgbm
 # https://lightgbm.readthedocs.io/en/latest/Installation-Guide.html#id18
+# https://github.com/microsoft/LightGBM/tree/master/python-package#build-gpu-version
 on:
   push:
     branches:
-      - dev
+      - lightgbm
   workflow_dispatch:
 
 jobs:
@@ -36,7 +37,7 @@ jobs:
       run: |
         # cmake -B build -S . -A x64 -DUSE_GPU=1 -DBOOST_ROOT=$BOOST_ROOT 
         # cmake -B build -S . -A x64 -DUSE_GPU=1 -DBOOST_ROOT=BOOST_ROOT -DOpenCL_LIBRARY="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.0/lib/x64/OpenCL.lib" -DOpenCL_INCLUDE_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.0/include"
-        
+
         python -V
         pip wheel lightgbm \
           --config-settings=cmake.define.USE_GPU=ON \
