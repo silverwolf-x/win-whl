@@ -11,9 +11,9 @@ jobs:
   build:
     runs-on: windows-2022
     steps:
-    # - uses: actions/setup-python@v5
-    #   with:
-    #     python-version: '3.10'
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
     - name: boost
       uses: MarkusJx/install-boost@main
       id: install-boost
@@ -61,7 +61,7 @@ jobs:
 
         git clone --recursive https://github.com/Microsoft/LightGBM
         cd LightGBM
-        sh ./build-python.sh bdist_wheel --gpu --boost-include-dir=$BOOST_ROOT
+        sh ./build-python.sh bdist_wheel --gpu --boost-include-dir=$BOOST_ROOT ----opencl-include-dir="$CUDA_PATH/include"
       env:
         BOOST_ROOT: ${{ steps.install-boost.outputs.BOOST_ROOT }}
     - run: tree LightGBM/dist
