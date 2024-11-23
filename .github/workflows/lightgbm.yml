@@ -22,7 +22,6 @@ jobs:
         boost_version: 1.86.0
         toolset: msvc
         cache: false
-    -  run: echo $HOME
 
     - name: cuda-toolkit
       uses: Jimver/cuda-toolkit@master
@@ -31,9 +30,17 @@ jobs:
       with:
         cuda: 12.1.1
         method: local
-        sub-packages: '["nvcc", "visual_studio_integration"]'
+        # sub-packages: '["nvcc", "visual_studio_integration"]'
+        sub-packages: '["nvcc", "cudart"]'
+
+        # Nice spot. I did not realize msvc worked without the VS integration of CUDA.
+        # https://github.com/bitsandbytes-foundation/bitsandbytes/pull/1055
+        # https://github.com/Jimver/cuda-toolkit/issues/253
+
+
         # Disable caching of the CUDA binaries, since it does not give us any significant performance improvement
-        uuse-local-cache: false
+        use-github-cache: false
+        use-local-cache: false
         # 在GITHUB_ENV中输出CUDA_PATH
 
     - name: echo version
