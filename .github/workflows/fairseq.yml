@@ -31,6 +31,7 @@ jobs:
           python -m pip install --upgrade "pip<24.1" 
           pip wheel fairseq
       - name: Restore fairseq and torch version from pip
+        shell: bash
         id: release_info
         run: |
           # 获取当前安装的 fairseq 版本
