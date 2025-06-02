@@ -21,14 +21,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: install torch and echo version
         run: |
-          pip install torch --index-url https://download.pytorch.org/whl/cu126
+          pip install uv
+          uv pip install torch --index-url https://download.pytorch.org/whl/cu126
           python -c "import torch; print(torch.__version__)"
-      - name: pip wheel fairseq with pip<24.1
-        run: | 
-          python -m pip install --upgrade "pip<24.1"
+      - name: Build fairseq wheel
+        run: |
+          uv pip install --upgrade "pip<24.1" 
           pip wheel fairseq
       - uses: actions/upload-artifact@v4
         with:
-          name: Windows whl
+          name: fairseq-py${{ matrix.python-version }}-win
           path: fairseq-*.whl
           if-no-files-found: error
