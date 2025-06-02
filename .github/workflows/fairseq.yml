@@ -22,11 +22,11 @@ jobs:
       - name: install torch and echo version
         run: |
           pip install uv
-          uv pip install torch --index-url https://download.pytorch.org/whl/cu126
+          uv pip install torch --index-url https://download.pytorch.org/whl/cu126 --system
           python -c "import torch; print(torch.__version__)"
       - name: Build fairseq wheel
         run: |
-          uv pip install --upgrade "pip<24.1" 
+          pip install --upgrade "pip<24.1" 
           pip wheel fairseq
       - uses: actions/upload-artifact@v4
         with:
