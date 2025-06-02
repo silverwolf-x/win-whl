@@ -30,9 +30,15 @@ jobs:
       - name: Build fairseq wheel
         run: |
           python -m pip install --upgrade "pip<24.1" 
-          pip install uv 
-          uv pip install fairseq --system
-          pip wheel fairseq
+          git clone https://github.com/facebookresearch/fairseq.git
+          cd fairseq
+
+          # Apply patch to support Python 3.12 dataclasses
+          sed -i.bak -E "s/(\w+: \w+) = (\w+\(\))$/\1 = field(default_factory=\2)/" fairseq/dataclass/configs.py
+          sed -i.bak "1i from dataclasses import field" fairseq/dataclass/configs.py
+          python setup.py bdist_wheel
+          pip install .
+          pip wheel .
       - name: Get release info
         id: release_info
         shell: bash
@@ -45,8 +51,9 @@ jobs:
           echo "version_number=${FAIRSEQ_VERSION}" >> $GITHUB_OUTPUT
           echo "torch_build_info=${TORCH_BUILD_INFO}" >> $GITHUB_OUTPUT
           # 设置环境变量以供后续作业使用
-          echo "::notice title=FAIRSEQ_VERSION::$FAIRSEQ_VERSION"
-          echo "::notice title=TORCH_BUILD_INFO::$TORCH_BUILD_INFO"
+          echo FAIRSEQ_VERSION=$FAIRSEQ_VERSION
+          echo TORCH_BUILD_INFO=$TORCH_BUILD_INFO
+
 
       - uses: actions/upload-artifact@v4
         with:
