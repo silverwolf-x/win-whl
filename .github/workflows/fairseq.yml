@@ -1,29 +1,45 @@
 name: fairseq
-on: 
+on:
   workflow_dispatch:
   push:
     branches:
       - fairseq
+    tags:
+      - 'v*' # 例如 v0.12.2, v1.0.0 等标签会触发
   pull_request:
     branches:
       - main
+
 jobs:
   build:
-    name: Build fairseq
+    name: Build fairseq wheel
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ['3.10', '3.11', '3.12','3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: install torch and echo version
+
+      - name: Determine fairseq version to build
+        id: pkg_version
+        shell: bash
         run: |
-          pip install uv
-          uv pip install torch --index-url https://download.pytorch.org/whl/cu126 --system
-          python -c "import torch; print(torch.__version__)"
+          VERSION=""
+          if [[ "${{ github.event_name }}" == "push" && "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}" # 从标签 (v0.12.2) 中提取版本号 (0.12.2)
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.version }}" != "" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "FAIRSEQ_VERSION=$VERSION" >> $GITHUB_ENV
+          if [[ -n "$VERSION" ]]; then
+            echo "Building fairseq version: $VERSION"
+          else
+            echo "Building latest fairseq version from PyPI (for non-release builds like branch pushes)"
+          fi
+
       - name: Build fairseq wheel
         run: |
           python -m pip install --upgrade "pip<24.1" 
@@ -33,3 +49,91 @@ jobs:
           name: fairseq-py${{ matrix.python-version }}-win
           path: fairseq-*.whl
           if-no-files-found: error
+
+  create_release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest # 通常在 Linux 环境中创建 Release 更方便
+    needs: build # 依赖 build 作业成功完成
+    # 仅在推送标签或手动调度并提供了版本时运行
+    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
+    permissions:
+      contents: write # 创建 Release 和上传资产所必需的权限
+    steps:
+      - name: Prepare Release Information
+        id: release_info
+        shell: bash
+        run: |
+          VERSION_NUMBER=""
+          TAG_NAME=""
+          # 设置默认的 torch 构建信息，如果通过 dispatch 提供了则使用输入值
+          TORCH_BUILD_INFO="a compatible CPU torch version" # 默认值
+          ADDITIONAL_NOTES=""
+
+          if [[ "${{ github.event_name }}" == "push" && "${{ startsWith(github.ref, 'refs/tags/') }}" == "true" ]]; then
+            TAG_NAME="${GITHUB_REF_NAME}"
+            VERSION_NUMBER="${GITHUB_REF_NAME#v}"
+            # 对于标签触发的发布，可以考虑从标签注释或提交信息中获取 torch_version_info
+            # 这里我们暂时使用默认值，或者您可以硬编码一个值，如果它是固定的
+            # 例如，如果您希望标签触发时也使用 dispatch 的默认值：
+            # TORCH_BUILD_INFO="${{ github.event.inputs.torch_version_info || 'torch-2.5.1+cpu' }}"
+            # 但 github.event.inputs 只在 workflow_dispatch 时有效，所以上述方法不直接适用。
+            # 为了简单起见，标签触发时，如果需要特定 torch 信息，建议手动编辑 Release 或采用更复杂的逻辑。
+            # 此处，如果 dispatch 的默认值是您想要的，可以这样设置：
+            DEFAULT_TORCH_INFO_FOR_TAGS="${{ inputs.torch_version_info || 'torch-2.5.1+cpu' }}"
+            if [[ -n "$DEFAULT_TORCH_INFO_FOR_TAGS" ]]; then
+                TORCH_BUILD_INFO="$DEFAULT_TORCH_INFO_FOR_TAGS"
+            fi
+
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION_NUMBER="${{ github.event.inputs.version }}"
+            TAG_NAME="v${VERSION_NUMBER}" # 基于输入的版本号构建标签名
+            if [[ -n "${{ github.event.inputs.torch_version_info }}" ]]; then
+              TORCH_BUILD_INFO="${{ github.event.inputs.torch_version_info }}"
+            fi
+            if [[ -n "${{ github.event.inputs.release_notes }}" ]]; then
+              ADDITIONAL_NOTES="${{ github.event.inputs.release_notes }}"
+            fi
+          else
+            echo "错误：无法确定发布版本。"
+            exit 1
+          fi
+
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "release_name=fairseq ${VERSION_NUMBER}" >> $GITHUB_OUTPUT
+          echo "version_number=${VERSION_NUMBER}" >> $GITHUB_OUTPUT
+          echo "torch_build_info=${TORCH_BUILD_INFO}" >> $GITHUB_OUTPUT
+          # 使用 EOF 来处理可能的多行附加说明
+          echo "additional_notes<<EOF" >> $GITHUB_OUTPUT
+          echo "${ADDITIONAL_NOTES}" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List downloaded files (for debugging)
+        run: ls -R 
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_info.outputs.tag_name }}
+          name: ${{ steps.release_info.outputs.release_name }} # 例如：fairseq 0.12.2
+          body: |
+            **${{ steps.release_info.outputs.release_name }}** build with ${{ steps.release_info.outputs.torch_build_info }} in windows
+
+            Download and install via:
+            ```sh
+            python -m pip install --upgrade "pip<24.1"
+            # 请从下面的资产中选择适合您 Python 版本的 .whl 文件。
+            # Python 3.10 示例 (fairseq 版本 ${{ steps.release_info.outputs.version_number }}):
+            pip install fairseq-${{ steps.release_info.outputs.version_number }}-cp310-cp310-win_amd64.whl
+            ```
+
+            ${{ steps.release_info.outputs.additional_notes }}
+          # actions/download-artifact 会将每个 artifact 放入以其命名的子目录中
+          # 例如 release_assets/fairseq-py3.10-win/*.whl
+          files: fairseq-*.whl
+          draft: true # 设置为 true 以创建草稿版本，稍后手动发布
+          prerelease: false # 设置为 true 以标记为预发布版本
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
