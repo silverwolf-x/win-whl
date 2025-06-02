@@ -28,13 +28,11 @@ jobs:
           check-latest: true
 
       - name: Build fairseq wheel
-        run: |
-          python -m pip install --upgrade "pip<24.1" 
-          pip wheel fairseq
-      - name: Restore fairseq and torch version from pip
         shell: bash
         id: release_info
         run: |
+          python -m pip install --upgrade "pip<24.1" 
+          pip wheel fairseq
           # 获取当前安装的 fairseq 版本
           FAIRSEQ_VERSION=$(python -c "import fairseq; print(fairseq.__version__)" || echo "unknown")
           # 获取当前安装的 torch 版本信息
@@ -81,7 +79,7 @@ jobs:
             # Python 3.10 示例 (fairseq 版本 ${{ needs.build.outputs.version_number }}):
             pip install fairseq-${{ needs.build.outputs.version_number }}-cp310-cp310-win_amd64.whl
             ```
-          files: fairseq-*.whl
+          files: "**/fairseq-*.whl"
           draft: true # 设置为 true 以创建草稿版本，稍后手动发布
           prerelease: false # 设置为 true 以标记为预发布版本
         env:
