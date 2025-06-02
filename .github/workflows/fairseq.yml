@@ -55,7 +55,7 @@ jobs:
     runs-on: ubuntu-latest # 通常在 Linux 环境中创建 Release 更方便
     needs: build # 依赖 build 作业成功完成
     # 仅在推送标签或手动调度并提供了版本时运行
-    if: (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')) || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
+    if: (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.event.inputs.version != '')
     permissions:
       contents: write # 创建 Release 和上传资产所必需的权限
     steps:
